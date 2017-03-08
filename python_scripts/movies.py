@@ -3,10 +3,11 @@ import urllib.request
 import zipfile
 import os
 import pandas as pd
+from statistics import mean
 
 DEBUG = True
 
-# This is the URL for the public data
+# # This is the URL for the public data
 url = "http://files.grouplens.org/datasets/movielens/ml-latest-small.zip"
 
 # This is the working directory
@@ -87,35 +88,60 @@ rated_movies = rated_movies.sort_values('rating', ascending=False)
 # Number of movies: 9126
 # Number of evaluations: 100005
 
-top20 = rated_movies.head(20)
-
 # Rated movies names:
 # ['movie_id', 'title', 'genres', 'user_id', 'rating', 'timestamp']
 
-top5_dict = {}
+# Shortcut for names
+rated_movies.dtypes
 
-for i in range(5):
-    title = top20[i]['title']
-    for j in rated_movies:
-        if rated_movies[j]['title'] == title:
-            top5_dict[title] = rated_movies[j]
+# Get summary of your data
+rated_movies.describe()
 
+# Getting the Transpose
+transposed_movies = rated_movies.T
 
-print(rated_movies.head(20))
-if DEBUG:
-    print(list(rated_movies.columns.values))
+# Sorting by an index
+rated_movies.sort_index(axis=1, ascending=False)
 
+# You can get the first two rows with
+rated_movies[0:3]
 
+# You can select data based in value of a column
+rated_movies['rating'] = pd.to_numeric(rated_movies['rating'][1:100005])
+rated_movies[rated_movies['rating'] > 4]
+rated_movies[rated_movies['title'] == 'Shawshank Redemption, The (1994)']
 
+# rated_movies = rated_movies.pop(0)
 
+# You can aggregate data like this
+grouped = rated_movies.groupby('title')
+group_by_sum = grouped.aggregate(sum)
+group_by_mean = grouped.aggregate(mean)
+# group_by_count = grouped.aggregate(count)
 
+# Or the short way
+grouped = rated_movies.groupby('title').sum()
 
+# Subsetting for our results
+top20 = grouped.sort_values('rating', ascending=False)[0:20]
+top5 = top20[0:5]
+# Wee need to transform it to a dict
+# so we can get the movies' titles
+top5_dict = top5.to_dict()
+# We need to get the items (Movies titles)
+top5_items = top5_dict['rating'].items()
 
+# A helper array for stacking the results per movie
+frames = []
 
+# A for loop for getting all the results matching a movie
+for name, value in top5_items:
+    frames.append(rated_movies[rated_movies['title'] == name])
 
-
-
-
-
-
-
+# Concatenate into a single data frame
+result = pd.concat(frames)
+# Export to CSV
+print("Exporting results to CSV")
+top20.to_csv(working_dir + 'top20.csv')
+top5.to_csv(working_dir + 'top5.csv')
+result.to_csv(working_dir + 'final.csv')
